@@ -12,15 +12,25 @@ export const App = () => {
   const [userId, setUserId] = useState(0);
   const [title, setTitle] = useState('');
 
-  const getUserById = (id: number): User => {
-    return usersFromServer.find(user => user.id === id) as User;
+  const getUserById = (id: number): User | undefined => {
+    return usersFromServer.find(user => user.id === id);
   };
 
-  const [todos, setTodos] = useState(
-    todosFromServer.map(todo => ({
-      ...todo,
-      user: getUserById(todo.userId),
-    })),
+  const [todos, setTodos] = useState<Todo[]>(
+    todosFromServer
+      .map(todo => {
+        const user = getUserById(todo.userId);
+
+        if (!user) {
+          return null;
+        }
+
+        return {
+          ...todo,
+          user,
+        };
+      })
+      .filter((todo): todo is Todo => todo !== null),
   );
   const [titleError, setTitleError] = useState(false);
   const [userError, setUserError] = useState(false);
@@ -54,8 +64,15 @@ export const App = () => {
       return;
     }
 
-    const maxTodoId = Math.max(...todos.map(todo => todo.id));
+    const maxTodoId =
+      todos.length > 0 ? Math.max(...todos.map(todo => todo.id)) : 0;
     const foundUser = getUserById(userId);
+
+    if (!foundUser) {
+      setUserError(true);
+
+      return;
+    }
 
     const todo: Todo = {
       id: maxTodoId + 1,
@@ -74,7 +91,7 @@ export const App = () => {
     <div className="App">
       <h1>Add todo form</h1>
 
-      <form action="/api/todos" method="POST" onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <div className="field">
           <input
             type="text"
